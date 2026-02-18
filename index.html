@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Traffic Exam | NK Digital Services</title>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --dark: #0f172a; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Mukta', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #f1f5f9; color: var(--dark); padding-bottom: 40px; }
+        .navbar { background: var(--dark); color: white; padding: 1.2rem; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .navbar span { color: var(--primary); font-weight: bold; }
+        .container { max-width: 500px; margin: auto; padding: 15px; }
+
+        /* Folders UI */
+        .folder { 
+            background: white; padding: 25px; border-radius: 15px; text-align: center; 
+            margin-bottom: 15px; border: 2px solid #e2e8f0; cursor: pointer;
+            transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .folder:active { transform: scale(0.97); background: #f8fafc; border-color: var(--primary); }
+        .dot { width: 45px; height: 45px; border-radius: 50%; display: inline-block; margin-bottom: 10px; }
+
+        /* Quiz UI */
+        #quiz-screen, #result-screen { background: white; padding: 20px; border-radius: 20px; display: none; }
+        .q-header { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; color: #64748b; }
+        .option { 
+            padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; 
+            margin-bottom: 10px; cursor: pointer; font-size: 1.1rem;
+        }
+        .option.correct { background: #dcfce7; border-color: var(--success); color: #166534; font-weight: bold; }
+        .option.wrong { background: #fee2e2; border-color: var(--danger); color: #991b1b; }
+        .disabled { pointer-events: none; }
+        .btn { width: 100%; padding: 15px; background: var(--dark); color: white; border: none; border-radius: 10px; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
+        .hidden { display: none; }
+    </style>
+
+    <script>
+        // QUESTION DATABASE
+        const db = {
+            easy: [
+                {q:"रातो ट्राफिक बत्तीको अर्थ के हो ?", a:["जान पाइन्छ","बिस्तारै चलाउनु","रोकिनु","मोड लिनु"], c:2},
+                {q:"हरियो बत्तीको अर्थ के हो ?", a:["रोकिनु","जान पाइन्छ","गति घटाउनु","साइड दिनु"], c:1},
+                {q:"पहेंलो बत्तीले के जनाउँछ ?", a:["जानु","रोकिने तयारी","पार्किङ","गति बढाउनु"], c:1},
+                {q:"ब्लु-बुक (Bluebook) भनेको के हो ?", a:["बैंकको किताब","सवारी दर्ता किताब","सवारी चलाउने अनुमति","नवीकरण रसिद"], c:1},
+                {q:"सवारीको कर कहिले तिर्नुपर्छ ?", a:["५ वर्षमा","२ वर्षमा","प्रत्येक वर्ष","तिर्नु पर्दैन"], c:2},
+                {q:"जेब्रा क्रसिङमा गाडीको गति कस्तो हुनुपर्छ ?", a:["तिव्र","रोक्न सकिने गरी कम","सामान्य","जे गरे नि हुन्छ"], c:1},
+                {q:"सडकको बीचमा खिचिएको पहेँलो रेखाले के जनाउँछ ?", a:["पार्किङ गर्ने ठाउँ","ओभरटेक गर्न निषेध","सवारी रोक्ने","मोड लिने"], c:1},
+                {q:"हर्नको प्रयोग कुन अवस्थामा मात्र करनाुपर्छ ?", a:["साथीलाई बोलाउन","खतराको संकेत दिन","बाटो खाली गर्न","रमाइलोको लागि"], c:1},
+                {q:"इन्धन भर्दा के गर्नु हुँदैन ?", a:["मोबाइल चलाउनु","धुम्रपान गर्नु","इन्जिन चालू राख्नु","माथिका सबै"], c:3},
+                {q:"कस्तो अवस्थामा सवारी चलाउनु जोखिमपूर्ण हुन्छ ?", a:["थाकेको बेला","मदिरा सेवन गरेको बेला","निन्द्रा लागेको बेला","माथिका सबै"], c:3}
+                // (Paste other EASY questions here from previous list)
+            ],
+            hard: [
+                {q:"सवारी चालक अनुमति पत्र (License) को अवधि कति हुन्छ ?", a:["३ वर्ष","५ वर्ष","१० वर्ष","आजिवन"], c:1},
+                {q:"आकस्मिक सवारी साधनलाई के गर्नुपर्छ ?", a:["ओभरटेक गर्ने","बाटो दिने","हर्न बजाउने","रोक्ने"], c:1},
+                {q:"ओभरटेक गरिसकेपछि कुन साइडमा फर्किनुपर्छ ?", a:["बायाँ","दायाँ","बीचमा","जता मन लाग्छ"], c:0},
+                {q:"राति विपरीत दिशाबाट गाडी आएमा के गर्ने ?", a:["हाई बीम बाल्ने","लो बीम दिने","लाइट बन्द गर्ने","हर्न बजाउने"], c:1},
+                {q:"फोग लाइट (Fog Light) कहिले प्रयोग गरिन्छ ?", a:["घाम लागेको बेला","कुहिरो लागेको बेला","राति मात्र","पानी परेको बेला"], c:1}
+                // (Paste other HARD questions here)
+            ],
+            expert: [
+                {q:"ABS को पुरा रुप के हो ?", a:["Auto Brake System","Anti-lock Braking System","Active Brake Solution","All Brake System"], c:1},
+                {q:"लामो ओरालोमा जाँदा कुन गियरको प्रयोग सुरक्षित हुन्छ ?", a:["न्यूट्रल","सानो गियर","ठूलो गियर","सबै"], c:1},
+                {q:"ब्याट्रीको पानी कम भएमा के थप्नुपर्छ ?", a:["सादा पानी","डिस्टिल्ड वाटर","तेजाब","नुन पानी"], c:1},
+                {q:"सवारी प्रदूषण परीक्षण (Green Sticker) को अवधि कति हुन्छ ?", a:["३ महिना","६ महिना","१ वर्ष","२ वर्ष"], c:1},
+                {q:"जिरो पोइन्ट (Zero Point) भनेको के हो ?", a:["सवारी रोक्ने ठाउँ","सडकको सुरुवात हुने विन्दु","दुर्घटना हुने ठाउँ","पार्किङ निषेध"], c:1}
+                // (Paste other EXPERT questions here)
+            ]
+        };
+
+        let currentSet = [];
+        let curIdx = 0;
+        let score = 0;
+
+        function startQuiz(lvl) {
+            currentSet = db[lvl];
+            curIdx = 0;
+            score = 0;
+            document.getElementById('folder-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
+            document.getElementById('level-tag').innerText = lvl.toUpperCase();
+            loadQ();
+        }
+
+        function loadQ() {
+            const q = currentSet[curIdx];
+            document.getElementById('progress').innerText = (curIdx + 1) + " / " + currentSet.length;
+            document.getElementById('question-text').innerText = q.q;
+            const box = document.getElementById('options-box');
+            box.innerHTML = '';
+            q.a.forEach((opt, i) => {
+                const d = document.createElement('div');
+                d.className = 'option';
+                d.innerText = opt;
+                d.onclick = function() { check(i, q.c, d); };
+                box.appendChild(d);
+            });
+            document.getElementById('next-btn').classList.add('hidden');
+        }
+
+        function check(sel, cor, el) {
+            const opts = document.querySelectorAll('.option');
+            opts.forEach(o => o.classList.add('disabled'));
+            if (sel === cor) {
+                el.classList.add('correct');
+                score++;
+            } else {
+                el.classList.add('wrong');
+                opts[cor].classList.add('correct');
+            }
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            curIdx++;
+            if (curIdx < currentSet.length) loadQ();
+            else showFinal();
+        }
+
+        function showFinal() {
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').innerText = score + " / " + currentSet.length;
+        }
+    </script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1>MR. TECHNICIAN <span>EXAM</span></h1>
+        <p style="font-size: 0.7rem; opacity: 0.6;">NK DIGITAL SERVICES</p>
+    </nav>
+
+    <div class="container">
+        <div id="folder-screen">
+            <h2 style="text-align: center; margin: 20px 0;">तह छान्नुहोस्</h2>
+            
+            <div class="folder" onclick="startQuiz('easy')">
+                <span class="dot" style="background: var(--success);"></span>
+                <h3>सजिलो (Easy)</h3>
+            </div>
+
+            <div class="folder" onclick="startQuiz('hard')">
+                <span class="dot" style="background: orange;"></span>
+                <h3>गाह्रो (Hard)</h3>
+            </div>
+
+            <div class="folder" onclick="startQuiz('expert')">
+                <span class="dot" style="background: var(--danger);"></span>
+                <h3>धेरै गाह्रो (Expert)</h3>
+            </div>
+        </div>
+
+        <div id="quiz-screen">
+            <div class="q-header">
+                <span id="level-tag">LEVEL</span>
+                <span id="progress">0/0</span>
+            </div>
+            <h2 id="question-text">...</h2>
+            <div id="options-box"></div>
+            <button id="next-btn" class="btn hidden" onclick="nextQuestion()">अर्को प्रश्न →</button>
+        </div>
+
+        <div id="result-screen" style="text-align: center;">
+            <h2>तपाईँको नतिजा</h2>
+            <h1 id="score-display" style="font-size: 3.5rem; margin: 20px 0; color: var(--primary);">0/0</h1>
+            <button class="btn" onclick="location.reload()">फेरि सुरु गर्नुहोस्</button>
+        </div>
+    </div>
+
+</body>
+</html>
